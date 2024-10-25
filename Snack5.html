@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Jeu Du Serpent avec Collision</title>
+    <style>
+        /* Style de base pour le corps, le canvas et les boutons */
+        body { text-align: center; font-family: Arial, sans-serif; background-color: #f0f8ff; }
+        h1 { color: #333; }
+        canvas { border: 2px solid #333; background-color: #e6f7ff; }
+        .controls { margin-top: 10px; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; }
+        #startBtn { background-color: #4CAF50; color: white; }
+        #restartBtn { background-color: #f44336; color: white; }
+        #scoreDisplay { font-size: 20px; margin-top: 10px; color: #333; }
+        #messageDisplay { color: #666; font-size: 18px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h1>SNAKE GAME</h1>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <div class="controls">
+        <button id="startBtn">Commencer le jeu</button>
+        <button id="restartBtn" disabled>Recommencer</button>
+    </div>
+    <div id="scoreDisplay">Score: 0</div>
+    <div id="messageDisplay"></div>
+
+    <script>
+        // Récupération des éléments du DOM
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const startBtn = document.getElementById("startBtn");
+        const restartBtn = document.getElementById("restartBtn");
+        const scoreDisplay = document.getElementById("scoreDisplay");
+        const messageDisplay = document.getElementById("messageDisplay");
+
+        // Variables du jeu
+        let score = 0;               // Score du joueur
+        let intervalId;              // Identifiant pour l'intervalle de mise à jour
+        const pas = 20;              // Taille d'un mouvement du serpent
+        let vX = 0, vY = 0;         // Vitesse du serpent sur les axes X et Y
+        let serpent = [{ x: 100, y: 100 }];  // Position initiale du serpent
+        let BX = Math.floor(Math.random() * (canvas.width / pas)) * pas;  // Position aléatoire du bug
+        let BY = Math.floor(Math.random() * (canvas.height / pas)) * pas; // Position aléatoire du bug
+        let formBug = true;          // État du bug (forme alternée)
+        let gameRunning = false;     // État du jeu (en cours ou non)
+
+        // Fonction pour dessiner un cercle
+        const cercle = (x, y, rayon, plein) => {
+            ctx.beginPath(); // Commencer un nouveau chemin
+            ctx.arc(x, y, rayon, 0, Math.PI * 2, false); // Dessiner un arc (cercle)
+            if (plein) ctx.fill(); // Remplir le cercle si demandé
+            else ctx.stroke(); // Tracer le contour si plein n'est pas vrai
+        };
+
+        // Fonction pour réinitialiser le jeu
+        const resetGame = () => {
+            clearInterval(intervalId); // Arrêter l'intervalle de mise à jour
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Effacer le canvas
+            score = 0; // Réinitialiser le score
+            scoreDisplay.textContent = "Score: 0"; // Mettre à jour l'affichage du score
+            serpent = [{ x: 100, y: 100 }]; // Réinitialiser le serpent
+            vX = 0; vY = 0; // Réinitialiser la vitesse
+            BX = Math.floor(Math.random() * (canvas.width / pas)) * pas; // Nouvelle position aléatoire pour le bug
+            BY = Math.floor(Math.random() * (canvas.height / pas)) * pas; // Nouvelle position aléatoire pour le bug
+            gameRunning = false; // Indiquer que le jeu n'est pas en cours
+            messageDisplay.textContent = "Appuyez sur 'Commencer le jeu' pour jouer"; // Afficher un message
+            startBtn.disabled = false; // Activer le bouton de démarrage
+            restartBtn.disabled = true; // Désactiver le bouton de redémarrage
+        };
+
+        // Fonction pour démarrer le jeu
+        const startGame = () => {
+            if (gameRunning) return; // Ne rien faire si le jeu est déjà en cours
+            gameRunning = true; // Indiquer que le jeu est en cours
+            startBtn.disabled = true; // Désactiver le bouton de démarrage
+            restartBtn.disabled = false; // Activer le bouton de redémarrage
+            vX = pas; // Initialiser la vitesse du serpent
+            intervalId = setInterval(updateGame, 200); // Démarrer la mise à jour du jeu toutes les 200ms
+            messageDisplay.textContent = "Utilisez les flèches pour contrôler le serpent!"; // Afficher un message d'instructions
+        };
+
+        // Fonction pour vérifier les collisions
+        const checkCollision = () => {
+            // Collision avec les bords du canvas
+            if (serpent[0].x < 0 || serpent[0].x >= canvas.width || serpent[0].y < 0 || serpent[0].y >= canvas.height) {
+                return true; // Collision avec les bords
+            }
+            // Collision avec le corps du serpent
+            for (let i = 1; i < serpent.length; i++) {
+                if (serpent[0].x === serpent[i].x && serpent[0].y === serpent[i].y) {
+                    return true; // Collision avec soi-même
+                }
+            }
+            return false; // Pas de collision
+        };
+
+        // Fonction pour mettre à jour le jeu à chaque intervalle
+        const updateGame = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Effacer le canvas
+
+            // Déplacement du corps du serpent
+            for (let i = serpent.length - 1; i > 0; i--) {
+                serpent[i] = { ...serpent[i - 1] }; // Copier la position de la queue vers l'avant
+            }
+
+            // Déplacement de la tête du serpent
+            serpent[0].x += vX; // Mettre à jour la position X de la tête
+            serpent[0].y += vY; // Mettre à jour la position Y de la tête
+
+            // Vérification des collisions
+            if (checkCollision()) {
+                clearInterval(intervalId); // Arrêter le jeu
+                messageDisplay.textContent = "Game Over ! Appuyez sur 'Recommencer' pour rejouer."; // Afficher le message de fin
+                gameRunning = false; // Indiquer que le jeu est terminé
+                startBtn.disabled = true; // Désactiver le bouton de démarrage
+                restartBtn.disabled = false; // Activer le bouton de redémarrage
+                return; // Quitter la fonction
+            }
+
+            // Gestion du bug et agrandissement du serpent
+            if (serpent[0].x === BX && serpent[0].y === BY) {
+                score++; // Augmenter le score
+                scoreDisplay.textContent = `Score: ${score}`; // Mettre à jour l'affichage du score
+                // Ajouter un nouveau segment au serpent à la position de la queue
+                serpent.push({ x: serpent[serpent.length - 1].x, y: serpent[serpent.length - 1].y });
+                // Générer une nouvelle position aléatoire pour le bug
+                BX = Math.floor(Math.random() * (canvas.width / pas)) * pas;
+                BY = Math.floor(Math.random() * (canvas.height / pas)) * pas;
+            }
+
+            // Affichage du bug
+            ctx.fillStyle = formBug ? "#FF5733" : "#33FF57"; // Alterner la couleur du bug
+            formBug = !formBug; // Changer l'état du bug
+            ctx.fillRect(BX, BY, pas, pas); // Dessiner le bug
+
+            // Affichage du serpent
+            ctx.fillStyle = "#3333FF"; // Couleur du serpent
+            serpent.forEach((segment) => cercle(segment.x + pas / 2, segment.y + pas / 2, 10, true)); // Dessiner chaque segment du serpent
+        };
+
+        // Écouter les événements de pression de touche pour contrôler le serpent
+        document.body.addEventListener("keydown", (event) => {
+            if (!gameRunning) return; // Ne rien faire si le jeu n'est pas en cours
+            switch (event.key) {
+                case "ArrowUp": if (vY === 0) { vX = 0; vY = -pas; } break; // Haut
+                case "ArrowDown": if (vY === 0) { vX = 0; vY = pas; } break; // Bas
+                case "ArrowLeft": if (vX === 0) { vX = -pas; vY = 0; } break; // Gauche
+                case "ArrowRight": if (vX === 0) { vX = pas; vY = 0; } break; // Droite
+            }
+        });
+
+        // Écouter les événements de clic sur les boutons
+        startBtn.addEventListener("click", startGame); // Démarrer le jeu
+        restartBtn.addEventListener("click", resetGame); // Réinitialiser le jeu
+
+        // Appeler la fonction de réinitialisation au chargement de la page
+        resetGame();
+    </script>
+</body>
+</html>
